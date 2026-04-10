@@ -16,3 +16,18 @@
 **Implementation sketch:** `src/core/embedding-queue.ts` with a Promise-based semaphore. Workers `await queue.submit(chunks)` which resolves when the queue has room. Queue flushes to OpenAI in batches of 100 with max 2-3 concurrent API calls. Track source file per chunk for error propagation.
 
 **Depends on:** Part 5 (parallel import with per-worker engines) -- already shipped.
+
+## P2
+
+### Implement AWS Signature V4 for S3 storage backend
+**What:** Replace the unsigned `signedFetch()` in `src/core/storage/s3.ts` with proper AWS Signature V4 request signing.
+
+**Why:** The current S3 implementation accepts `accessKeyId` and `secretAccessKey` but never signs requests. It only works with public buckets or pre-signed URLs. Private S3 buckets return 403.
+
+**Pros:** Enables private S3/R2/MinIO bucket support. Users can store files securely without relying on public bucket access.
+
+**Cons:** AWS Sig V4 is complex (canonical request, string to sign, signing key derivation). Could use a lightweight library instead of rolling from scratch. Medium implementation effort.
+
+**Context:** Identified during CSO security audit (2026-04-10). The code explicitly comments this as "simplified" and not production-ready. Nobody uses S3 storage today (Supabase Storage is the default). Only implement when S3 becomes a real deployment path.
+
+**Depends on:** Nothing. Self-contained change to `src/core/storage/s3.ts`.

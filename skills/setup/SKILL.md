@@ -224,6 +224,56 @@ If they agree:
 
 If already configured or user declines, skip.
 
+## Phase H: Live Sync Setup (MUST ADD)
+
+The brain repo is the source of truth. If sync doesn't run automatically, the
+vector DB falls behind and gbrain returns stale answers. This phase is not optional.
+
+Read `docs/GBRAIN_SKILLPACK.md` Section 18 for the full reference. Key points:
+
+1. **Check the connection pooler first.** Sync uses transactions on every import.
+   If `DATABASE_URL` uses Supabase's Transaction mode pooler, sync will throw
+   `.begin() is not a function` and silently skip most pages. Verify the connection
+   string uses Session mode (port 6543, Session mode) or direct (port 5432).
+
+2. **Set up automatic sync.** Choose the approach that fits your environment:
+   - **Cron** (recommended for agents): register a cron every 5-30 minutes:
+     `gbrain sync --repo /data/brain && gbrain embed --stale`
+   - **Watch mode**: `gbrain sync --watch --repo /data/brain` under a process
+     manager. Pair with a cron fallback (watch exits after 5 consecutive failures).
+   - **Webhook or git hook**: if available in your environment.
+
+3. **Verify sync works.** Don't just check that the command ran. Check that it
+   worked:
+   - `gbrain stats` should show page count close to syncable file count in the repo.
+   - If page count is way too low, the pooler bug is silently skipping pages.
+   - Push a test change and confirm it appears in `gbrain search`.
+
+4. **Chain sync + embed.** Always run both: `gbrain sync --repo <path> && gbrain
+   embed --stale`. For small syncs, embeddings are generated inline. The `embed
+   --stale` is a safety net for any stale chunks.
+
+Tell the user: "Live sync is configured. The brain will stay current automatically.
+I'll verify it's working in the next phase."
+
+## Phase I: Full Verification
+
+Run the full verification runbook to confirm the entire installation is working.
+
+1. Read `docs/GBRAIN_VERIFY.md`
+2. Execute each check in order
+3. Report results to the user
+4. Fix any failures before declaring setup complete
+
+Every check in the runbook should pass. The most important one is check 4 (live
+sync actually works): push a change, wait for sync, search for the corrected text.
+"Sync ran" is not the same as "sync worked."
+
+Tell the user: "I've verified the full GBrain installation. Here's the status of
+each check: [list results]. Everything is working / [specific item] needs attention."
+
+If already configured or user declines, skip.
+
 ## Schema State Tracking
 
 After presenting the recommended directories (Phase C/E) and the user selects which
@@ -245,3 +295,8 @@ re-suggesting things the user already declined.
 - `gbrain doctor --json` -- health check
 - `gbrain check-update --json` -- check for updates
 - `gbrain embed refresh` -- generate embeddings
+- `gbrain embed --stale` -- backfill missing embeddings
+- `gbrain sync --repo <path>` -- one-shot sync from brain repo
+- `gbrain sync --watch --repo <path>` -- continuous sync polling
+- `gbrain config get sync.last_run` -- check last sync timestamp
+- `gbrain stats` -- page count + embed coverage

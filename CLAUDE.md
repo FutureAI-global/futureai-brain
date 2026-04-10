@@ -55,6 +55,23 @@ E2E tests (`test/e2e/`): Run against real Postgres+pgvector. Require `DATABASE_U
 - Always run E2E tests when they exist. Do not skip them just because DATABASE_URL
   is not set. Start the test DB, run the tests, then tear it down.
 
+### API keys and running ALL tests
+
+ALWAYS source the user's shell profile before running tests:
+
+```bash
+source ~/.zshrc 2>/dev/null || true
+```
+
+This loads `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`. Without these, Tier 2 tests
+skip silently. Do NOT skip Tier 2 tests just because they require API keys — load
+the keys and run them.
+
+When asked to "run all E2E tests" or "run tests", that means ALL tiers:
+- Tier 1: `bun run test:e2e` (mechanical, sync, upgrade — no API keys needed)
+- Tier 2: `test/e2e/skills.test.ts` (requires OpenAI + Anthropic + openclaw CLI)
+- Always spin up the test DB, source zshrc, run everything, tear down.
+
 ### E2E test DB lifecycle (ALWAYS follow this)
 
 You are responsible for spinning up and tearing down the test Postgres container.
@@ -101,14 +118,49 @@ Before shipping (/ship) or reviewing (/review), always run the full test suite:
 
 Both must pass. Do not ship with failing E2E tests. Do not skip E2E tests.
 
+## CHANGELOG voice
+
+CHANGELOG.md is read by agents during auto-update (Section 17). The agent summarizes
+the changelog to convince the user to upgrade. Write changelog entries that sell the
+upgrade, not document the implementation.
+
+- Lead with what the user can now DO that they couldn't before
+- Frame as benefits and capabilities, not files changed or code written
+- Make the user think "hell yeah, I want that"
+- Bad: "Added GBRAIN_VERIFY.md installation verification runbook"
+- Good: "Your agent now verifies the entire GBrain installation end-to-end, catching
+  silent sync failures and stale embeddings before they bite you"
+- Bad: "Setup skill Phase H and Phase I added"
+- Good: "New installs automatically set up live sync so your brain never falls behind"
+
 ## Version migrations
 
-When shipping a GBrain version that requires agent action after upgrade (schema
-changes, changed defaults, deprecated commands), create a migration file at
-`skills/migrations/v[version].md`. The auto-update agent reads these files
-post-upgrade and executes the directives. See GBRAIN_SKILLPACK.md Section 17.
+Create a migration file at `skills/migrations/v[version].md` when a release
+includes changes that existing users need to act on. The auto-update agent
+reads these files post-upgrade (Section 17, Step 4) and executes them.
 
-If a release only has bug fixes with no behavior changes, no migration file is needed.
+**You need a migration file when:**
+- New setup step that existing installs don't have (e.g., v0.5.0 added live sync,
+  existing users need to set it up, not just new installs)
+- New SKILLPACK section with a MUST ADD setup requirement
+- Schema changes that require `gbrain init` or manual SQL
+- Changed defaults that affect existing behavior
+- Deprecated commands or flags that need replacement
+- New verification steps that should run on existing installs
+- New cron jobs or background processes that should be registered
+
+**You do NOT need a migration file when:**
+- Bug fixes with no behavior changes
+- Documentation-only improvements (the agent re-reads docs automatically)
+- New optional features that don't affect existing setups
+- Performance improvements that are transparent
+
+**The key test:** if an existing user upgrades and does nothing else, will their
+brain work worse than before? If yes, migration file. If no, skip it.
+
+Write migration files as agent instructions, not technical notes. Tell the agent
+what to do, step by step, with exact commands. See `skills/migrations/v0.5.0.md`
+for the pattern.
 
 ## Schema state tracking
 
@@ -118,16 +170,38 @@ reads this during upgrades to suggest new schema additions without re-suggesting
 things the user already declined. The setup skill writes the initial state during
 Phase C/E. Never modify a user's custom directories or re-suggest declined ones.
 
+## GitHub Actions SHA maintenance
+
+All GitHub Actions in `.github/workflows/` are pinned to commit SHAs. Before shipping
+(`/ship`) or reviewing (`/review`), check for stale pins and update them:
+
+```bash
+for action in actions/checkout oven-sh/setup-bun actions/upload-artifact actions/download-artifact softprops/action-gh-release gitleaks/gitleaks-action; do
+  tag=$(grep -r "$action@" .github/workflows/ | head -1 | grep -o '#.*' | tr -d '# ')
+  [ -n "$tag" ] && echo "$action@$tag: $(gh api repos/$action/git/ref/tags/$tag --jq .object.sha 2>/dev/null)"
+done
+```
+
+If any SHA differs from what's in the workflow files, update the pin and version comment.
+
 ## Skill routing
 
 When the user's request matches an available skill, ALWAYS invoke it using the Skill
 tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
 The skill has specialized workflows that produce better results than ad-hoc answers.
 
+**NEVER hand-roll ship operations.** Do not manually run git commit + push + gh pr
+create when /ship is available. /ship handles VERSION bump, CHANGELOG, document-release,
+pre-landing review, test coverage audit, and adversarial review. Manually creating a PR
+skips all of these. If the user says "commit and ship", "push and ship", "bisect and
+ship", or any combination that ends with shipping — invoke /ship and let it handle
+everything including the commits. If the branch name contains a version (e.g.
+`v0.5-live-sync`), /ship should use that version for the bump.
+
 Key routing rules:
 - Product ideas, "is this worth building", brainstorming → invoke office-hours
 - Bugs, errors, "why is this broken", 500 errors → invoke investigate
-- Ship, deploy, push, create PR → invoke ship
+- Ship, deploy, push, create PR, "commit and ship", "push and ship" → invoke ship
 - QA, test the site, find bugs → invoke qa
 - Code review, check my diff → invoke review
 - Update docs after shipping → invoke document-release

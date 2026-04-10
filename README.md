@@ -221,6 +221,17 @@ knowledge brain.
 7. Set up a daily cron for `gbrain check-update`.
    Notify me on new features only, not patches.
    Never auto-install, just tell me what's new.
+
+8. Set up automatic sync so the vector DB stays current
+   with the brain repo. Read GBRAIN_SKILLPACK.md Section 18
+   for approaches (cron, --watch, webhook). Pick what fits
+   your environment. Always chain:
+   gbrain sync --repo <path> && gbrain embed --stale
+   Verify: push a change, confirm it appears in search.
+
+9. Run the verification runbook (docs/GBRAIN_VERIFY.md)
+   to confirm everything works: schema, sync, embeddings,
+   brain-first lookup.
 ```
 
 OpenClaw will install gbrain, walk through Supabase setup, discover your markdown files, import them, and prove search works with a query from your data.
@@ -680,6 +691,7 @@ Initial embedding cost: ~$4-5 for 7,500 pages via OpenAI text-embedding-3-large.
 - [GBRAIN_V0.md](docs/GBRAIN_V0.md) -- Full product spec, all architecture decisions, every option considered
 - [ENGINES.md](docs/ENGINES.md) -- Pluggable engine interface, capability matrix, how to add backends
 - [SQLITE_ENGINE.md](docs/SQLITE_ENGINE.md) -- Complete SQLite engine plan with schema, FTS5, vector search options
+- [GBRAIN_VERIFY.md](docs/GBRAIN_VERIFY.md) -- Installation verification runbook: schema, live sync, embeddings, brain-first lookup
 
 ## Contributing
 

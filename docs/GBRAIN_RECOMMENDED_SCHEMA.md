@@ -1,4 +1,4 @@
-<!-- schema-version: 0.4.1 -->
+<!-- schema-version: 0.5.0 -->
 <!-- source: https://raw.githubusercontent.com/garrytan/gbrain/master/docs/GBRAIN_RECOMMENDED_SCHEMA.md -->
 # Brain: The LLM-Maintained Knowledge Base
 
