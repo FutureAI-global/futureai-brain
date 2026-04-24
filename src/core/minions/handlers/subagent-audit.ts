@@ -31,6 +31,12 @@ export interface SubagentSubmissionEvent {
   model?: string;
   tools_count?: number;
   allowed_tools?: string[];
+  /**
+   * Which LLM provider this subagent uses. Default (omitted) = Anthropic
+   * SDK pay-as-you-go. 'claude-cli-mcp' = routed through native `claude -p
+   * --mcp-config` for Max-subscription billing (see subagent-mcp-handler.ts).
+   */
+  provider?: 'anthropic-sdk' | 'claude-cli-mcp';
 }
 
 export interface SubagentHeartbeatEvent {
@@ -47,6 +53,12 @@ export interface SubagentHeartbeatEvent {
   tokens?: { in?: number; out?: number; cache_read?: number; cache_create?: number };
   /** Short error text for tool_failed. First 200 chars. */
   error?: string;
+  /** Provider that emitted this event. See SubagentSubmissionEvent.provider. */
+  provider?: 'anthropic-sdk' | 'claude-cli-mcp';
+  /** Per-turn input tokens. Duplicates `tokens.in`; either works. */
+  tokens_in?: number;
+  /** Per-turn output tokens. Duplicates `tokens.out`. */
+  tokens_out?: number;
 }
 
 export type SubagentAuditEvent = SubagentSubmissionEvent | SubagentHeartbeatEvent;

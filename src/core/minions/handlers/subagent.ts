@@ -46,6 +46,8 @@ import {
   logSubagentSubmission,
   logSubagentHeartbeat,
 } from './subagent-audit.ts';
+import { shouldUseMcpProvider } from './subagent-mcp-launcher.ts';
+import { runSubagentMcpPath } from './subagent-mcp-handler.ts';
 
 // ── Defaults ────────────────────────────────────────────────
 
@@ -142,6 +144,16 @@ export function makeSubagentHandler(deps: SubagentDeps) {
     const data = (ctx.data ?? {}) as unknown as SubagentHandlerData;
     if (!data.prompt || typeof data.prompt !== 'string') {
       throw new Error('subagent job data.prompt is required (string)');
+    }
+
+    // MCP-provider fast path (2026-04-24): route the LLM+tool loop through
+    // `claude -p --mcp-config` when opt-in is set, so the Max subscription
+    // covers inference. Bypasses ALL per-turn persistence + replay logic —
+    // `claude -p` owns the loop internally. Tradeoff: no crash-resume on
+    // this path. See subagent-mcp-handler.ts for the full observability
+    // note. SDK path (below) remains the default.
+    if (shouldUseMcpProvider()) {
+      return runSubagentMcpPath(ctx, data);
     }
 
     const model = data.model ?? DEFAULT_MODEL;
