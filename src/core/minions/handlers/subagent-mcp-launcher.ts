@@ -260,7 +260,14 @@ export async function runSubagentViaMcp(opts: McpLauncherOpts): Promise<McpLaunc
 /**
  * Return true if the `claude -p --mcp-config` codepath should be used for
  * subagent LLM calls. Opt-in via env var; the SDK path remains the default.
+ *
+ * Primary env var is `OLYMPUS_SUBAGENT_PROVIDER` (matches the Olympus brand).
+ * `GBRAIN_SUBAGENT_PROVIDER` is accepted as a deprecated alias for
+ * backward compatibility — will be removed in a future major. When BOTH
+ * are set, OLYMPUS_* wins.
  */
 export function shouldUseMcpProvider(): boolean {
+  const primary = process.env.OLYMPUS_SUBAGENT_PROVIDER;
+  if (primary !== undefined) return primary === 'claude-cli-mcp';
   return process.env.GBRAIN_SUBAGENT_PROVIDER === 'claude-cli-mcp';
 }
