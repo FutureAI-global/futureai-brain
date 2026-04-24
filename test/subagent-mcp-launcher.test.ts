@@ -59,18 +59,55 @@ describe('subagent-mcp-launcher · buildMcpConfig', () => {
 });
 
 describe('subagent-mcp-launcher · shouldUseMcpProvider', () => {
-  it('returns true only when env flag is the exact opt-in value', () => {
-    const prev = process.env.GBRAIN_SUBAGENT_PROVIDER;
+  it('returns true when OLYMPUS_SUBAGENT_PROVIDER is the opt-in value', () => {
+    const prevOlympus = process.env.OLYMPUS_SUBAGENT_PROVIDER;
+    const prevGbrain = process.env.GBRAIN_SUBAGENT_PROVIDER;
     try {
+      delete process.env.OLYMPUS_SUBAGENT_PROVIDER;
       delete process.env.GBRAIN_SUBAGENT_PROVIDER;
       expect(shouldUseMcpProvider()).toBe(false);
-      process.env.GBRAIN_SUBAGENT_PROVIDER = 'sdk';
+      process.env.OLYMPUS_SUBAGENT_PROVIDER = 'sdk';
       expect(shouldUseMcpProvider()).toBe(false);
+      process.env.OLYMPUS_SUBAGENT_PROVIDER = 'claude-cli-mcp';
+      expect(shouldUseMcpProvider()).toBe(true);
+    } finally {
+      if (prevOlympus === undefined) delete process.env.OLYMPUS_SUBAGENT_PROVIDER;
+      else process.env.OLYMPUS_SUBAGENT_PROVIDER = prevOlympus;
+      if (prevGbrain === undefined) delete process.env.GBRAIN_SUBAGENT_PROVIDER;
+      else process.env.GBRAIN_SUBAGENT_PROVIDER = prevGbrain;
+    }
+  });
+
+  it('accepts deprecated GBRAIN_SUBAGENT_PROVIDER as fallback', () => {
+    const prevOlympus = process.env.OLYMPUS_SUBAGENT_PROVIDER;
+    const prevGbrain = process.env.GBRAIN_SUBAGENT_PROVIDER;
+    try {
+      delete process.env.OLYMPUS_SUBAGENT_PROVIDER;
       process.env.GBRAIN_SUBAGENT_PROVIDER = 'claude-cli-mcp';
       expect(shouldUseMcpProvider()).toBe(true);
     } finally {
-      if (prev === undefined) delete process.env.GBRAIN_SUBAGENT_PROVIDER;
-      else process.env.GBRAIN_SUBAGENT_PROVIDER = prev;
+      if (prevOlympus === undefined) delete process.env.OLYMPUS_SUBAGENT_PROVIDER;
+      else process.env.OLYMPUS_SUBAGENT_PROVIDER = prevOlympus;
+      if (prevGbrain === undefined) delete process.env.GBRAIN_SUBAGENT_PROVIDER;
+      else process.env.GBRAIN_SUBAGENT_PROVIDER = prevGbrain;
+    }
+  });
+
+  it('OLYMPUS_* wins when both are set', () => {
+    const prevOlympus = process.env.OLYMPUS_SUBAGENT_PROVIDER;
+    const prevGbrain = process.env.GBRAIN_SUBAGENT_PROVIDER;
+    try {
+      process.env.OLYMPUS_SUBAGENT_PROVIDER = 'sdk';
+      process.env.GBRAIN_SUBAGENT_PROVIDER = 'claude-cli-mcp';
+      expect(shouldUseMcpProvider()).toBe(false);
+      process.env.OLYMPUS_SUBAGENT_PROVIDER = 'claude-cli-mcp';
+      process.env.GBRAIN_SUBAGENT_PROVIDER = 'sdk';
+      expect(shouldUseMcpProvider()).toBe(true);
+    } finally {
+      if (prevOlympus === undefined) delete process.env.OLYMPUS_SUBAGENT_PROVIDER;
+      else process.env.OLYMPUS_SUBAGENT_PROVIDER = prevOlympus;
+      if (prevGbrain === undefined) delete process.env.GBRAIN_SUBAGENT_PROVIDER;
+      else process.env.GBRAIN_SUBAGENT_PROVIDER = prevGbrain;
     }
   });
 });
