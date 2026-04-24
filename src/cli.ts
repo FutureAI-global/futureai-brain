@@ -21,7 +21,7 @@ for (const op of operations) {
 // CLI-only commands that bypass the operation layer
 const CLI_ONLY = new Set(['init', 'upgrade', 'post-upgrade', 'check-update', 'integrations', 'publish', 'check-backlinks', 'lint', 'report', 'import', 'export', 'files', 'embed', 'serve', 'call', 'config', 'doctor', 'migrate', 'eval', 'sync', 'extract', 'features', 'autopilot', 'graph-query', 'jobs', 'agent', 'apply-migrations', 'skillpack-check', 'skillpack', 'resolvers', 'integrity', 'repair-jsonb', 'orphans', 'sources', 'dream', 'check-resolvable', 'routing-eval', 'skillify']);
 
-async function main() {
+export async function main() {
   // Parse global flags (--quiet / --progress-json / --progress-interval)
   // BEFORE command dispatch, so `gbrain --progress-json doctor` works.
   // The stripped argv is what the command sees.
